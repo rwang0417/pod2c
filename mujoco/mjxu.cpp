@@ -291,6 +291,7 @@ double* findfield(const char* name, int* nr, int* nc)
     int nuser_actuator = m->nuser_actuator;
     int nuser_sensor = m->nuser_sensor;
     int njmax = m->njmax;
+    int nmocap = m->nmocap;
 
     // find field
     #define X(TYPE, NAME, NR, NC)                               \
@@ -378,18 +379,6 @@ void mexFunction(int nout, mxArray* pout[], int nin, const mxArray* pin[])
         mju_user_warning = mju_MATLAB_warning;
         mju_user_malloc = mju_MATLAB_malloc;
         mju_user_free = mju_MATLAB_free;
-
-        // activate MuJoCo license
-        DWORD usernamesize = 30;
-        GetUserName(username, &usernamesize);
-        if (username[0] == 'R')
-        {
-            mj_activate("mjkeybig.txt");
-        }
-        else
-        {
-            mj_activate("mjkeysmall.txt");
-        }
 
         // load and compile model
         char error[1000] = "Could not load binary model";

@@ -78,7 +78,7 @@ while forward_flag
     end
     cost_new = cost_new + 0.5*[reshape(Task.Ck*(x_new(:,horizon+1:-1:horizon+2-Task.qx)-repmat(Task.xTarget,1,Task.qx)),Task.nm*Task.qx,1);reshape(u_new(:,horizon:-1:horizon+2-Task.qu),Model.nu*(Task.qu-1),1)]'*Task.QT*[reshape(Task.Ck*(x_new(:,horizon+1:-1:horizon+2-Task.qx)-repmat(Task.xTarget,1,Task.qx)),Task.nm*Task.qx,1);reshape(u_new(:,horizon:-1:horizon+2-Task.qu),Model.nu*(Task.qu-1),1)];
     if ite > 1
-        z = (cost_new-cost(ite-1))/delta_j;
+        z = (cost(ite-1) - cost_new)/delta_j;
     end
     
     if (z >= -0.6 || Task.alpha < 10^-5)
@@ -96,7 +96,8 @@ while forward_flag
         Task.alpha = 0.99*Task.alpha;
     end
 end
-state_error = norm(x_nom(1:2,end)-Task.xTarget(1:2));
+x_terminal=x_nom;
+state_error = norm(x_terminal(1:2,end)-Task.xTarget(1:2));
 % [state_error cost_new]
 
 % sysid - arma
@@ -142,12 +143,13 @@ for i=skip:1:horizon
 end
 
 %% backpass
-delta_j = 0;
+delta_j = 0; 
 for i = horizon:-1:skip
     Quu(:,:,i) = B_aug(:,:,i)'*Sk(:,:,i+1)*B_aug(:,:,i)+Task.R;
     if min(eig(Quu(:,:,i))) <= 0
         disp('Quu is not positive definite')
     end
+
     kpreinv = inv(Quu(:,:,i));
     K(:,:,i) = kpreinv*B_aug(:,:,i)'*Sk(:,:,i+1)*A_aug(:,:,i);
     Kv(:,:,i) = kpreinv*B_aug(:,:,i)';
@@ -156,7 +158,7 @@ for i = horizon:-1:skip
     vk(:,i) = (A_aug(:,:,i)-B_aug(:,:,i)*K(:,:,i))'*vk(:,i+1)-K(:,:,i)'*Task.R*u_nom(:,i)+Task.Q*[reshape(Z_NORM(:,i:-1:i-Task.qx+1)-Task.Ck*repmat(Task.xTarget,1,Task.qx),Task.nm*Task.qx,1);reshape(u_nom(:,i-1:-1:i-Task.qu+1),Model.nu*(Task.qu-1),1)];
     kt(:,i) = - Kv(:,:,i)*vk(:,i+1) - Ku(:,:,i)*u_nom(:,i); 
     Qu(:,i) = Task.R*u_nom(:,i)+B_aug(:,:,i)'*vk(:,i+1);
-    delta_j = delta_j + (Task.alpha*kt(:,i)'*Qu(:,i)+Task.alpha^2/2*kt(:,i)'*Quu(:,:,i)*kt(:,i));
+    delta_j = delta_j - (Task.alpha*kt(:,i)'*Qu(:,i)+Task.alpha^2/2*kt(:,i)'*Quu(:,:,i)*kt(:,i));
 end
 if isempty(cost0)
     cost0 = cost(1);
@@ -171,7 +173,7 @@ end
 ite = ite + 1; 
 if strcmp(Model.name, 's6') || strcmp(Model.name, 's3')
     criteria = (norm(x_nom(1:2,end)-Task.xTarget(1:2))>=0.03); % s6
-elseif strcmp(Model.name, 'cartpole') || strcmp(Model.name, 'acrobot') || strcmp(Model.name, 'cheetah')
+elseif strcmp(Model.name, 'cartpole') || strcmp(Model.name, 'acrobot')% || strcmp(Model.name, 'pendulum')
     criteria = (mean(conv_rate) > Task.converge); % cartpole
 elseif strcmp(Model.name, 'fish')
     criteria = (norm(x_nom(1:3,end)-Task.xTarget(1:3))>=0.02); % fish
@@ -179,8 +181,7 @@ elseif strcmp(Model.name, 'pendulum')
 %     criteria = (norm(x_nom(1:2,end)-Task.xTarget(1:2))>=0.02); % pendulum
     criteria = (ite < Task.maxIte); % pendulum
 else
-%     disp('Criteria not specified...')
-    criteria = (ite < Task.maxIte);
+    disp('Criteria not specified...')
 end
 end
 train_time = toc;

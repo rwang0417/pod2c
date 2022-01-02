@@ -21,16 +21,19 @@ Bid = zeros(Model.nsys,Model.nu,Task.horizon);
 criteria = true;
 conv_rate = ones(3,1);
 horizon = Task.horizon;
-x_new = zeros(Model.nsys,horizon+1,Task.avg_num);
-u_new = zeros(Model.nu,horizon,Task.avg_num);
+x_new = zeros(Model.nsys,horizon+1,Task.avg_num_forward);
+u_new = zeros(Model.nu,horizon,Task.avg_num_forward);
 
 %% ILQR
 ite = 1;idx = 1;tic;
 while ite <= Task.maxIte && criteria
+    if ite == Task.maxIte
+        Task.training_noise=0;
+    end
 %% forward pass
 forward_flag = true;
 while forward_flag
-    for r = 1:1:Task.avg_num
+    for r = 1:1:Task.avg_num_forward
         x_new(:,1,r) = Model.xInit+Task.training_noise*randn(Model.nsys,1);
         u_new(:,:,r) = u_nom;
         mexstep('reset');
@@ -60,7 +63,7 @@ while forward_flag
         z = (cost(ite-1) - cost_new)/delta_j;
     end
     
-    if (z >= 0 || Task.alpha < 10^-5)
+    if (z >= -0.6 || Task.alpha < 10^-5)
         forward_flag = false;
         cost(ite) = cost_new;
         x_nom = x_avg;
@@ -118,7 +121,7 @@ for i = 1:1:horizon
     Aid(:,:,i) = AB(:,1:Model.nsys)+1*Bid(:,:,i)*K(:,:,i);
 end
 traj_norm = sqrt(sum/Model.nsys/horizon/Task.avg_num/Task.nSim)
-
+iteration = ite
 % for i = 1:1:horizon
 %     delta_x1 = Task.statePtb*1*randn(Model.nsys,Task.nSim);
 %     delta_u = Task.statePtb*1*randn(Model.nu,Task.nSim);  

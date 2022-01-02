@@ -21,7 +21,7 @@ function [MTK] = ls_lqg(...
 % Outputs:
 %     MTK,MYE,MU1,MYM:          Feedback gains (mat)
 %
-% Example:                      [MTK,MYE,MU1,MYM] = arma_lqg(pend,pendTask,cur_state,u_nom,0,1);
+% Example:                      [MTK,MYE,MU1,MYM] = ls_lqg(pend,pendTask,cur_state,u_nom,0,1);
 %
 % $Revision: R2020b$ 
 % $Author: Ran Wang$
@@ -30,7 +30,7 @@ function [MTK] = ls_lqg(...
 %% params
 % lqr cost parameters
 sig_q = 10^2;
-sig_f = 10^8;%8fish
+sig_f = 10^4;%8fish
 sig_r = 10^0;
 
 u_max = max(max(abs(u_nom)));
@@ -146,7 +146,7 @@ for i = 1:1:horizon
 end
 
 % %% LQG Addition
-% Wi = 1e1*eye(Model.nu);
+% Wi = 1e1*eye(Model.nu); % only in control, can be changed to state noise
 % Vi = 1e-2*eye(Task.nm);
 % 
 % D_aug = zeros(Task.nm*Task.qx+Model.nu*(Task.qu-1),Model.nu);

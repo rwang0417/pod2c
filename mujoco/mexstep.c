@@ -78,19 +78,6 @@ void mexFunction(int nout, mxArray* pout[], int nin, const mxArray* pin[])
     {
         mxGetString(pin[1], filename, 100);
 
-        // activate MuJoCo license
-        DWORD usernamesize = 30;
-        GetUserName(username, &usernamesize);
-        if (username[0] == 'R') {
-            mj_activate("./mujoco/keys/mjkeybig.txt");
-        }
-        else if (username[0] == 'r'){
-            mj_activate("./mujoco/keys/mjkeyda.txt");
-        }
-        else {
-            mj_activate("./mujoco/keys/mjkeysmall.txt");
-        }
-
         // load and compile model
         char error[1000] = "Could not load binary model";
         m = mj_loadXML(filename, 0, error, 1000);

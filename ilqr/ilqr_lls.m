@@ -5,7 +5,7 @@ function [u_nom,x_nom,cost,train_time] = ilqr_lls(...
     cur_u_traj,...
     horizon,...
     cost0)
-% ilqr_ls
+% ilqr_lls
 %
 % Description: Run ls-ilqr algorithm on mujoco robotics examples
 %
@@ -23,7 +23,7 @@ function [u_nom,x_nom,cost,train_time] = ilqr_lls(...
 %     cost:                     Cost during optimization (1 by nite double)
 %     trian_time:               Time taken for training (double)
 %
-% Example:                      [u_nom,x_nom,cost,trian_time] = ilqr_lss(pend,pendTask,pend.xInit,[],pend.stepNum,cost0);
+% Example:                      [u_nom,x_nom,cost,trian_time] = ilqr_lls(pend,pendTask,pend.xInit,[],pend.stepNum,cost0);
 %
 % $Revision: R2020b$ 
 % $Author: Ran Wang$
@@ -60,7 +60,7 @@ while forward_flag
     mexstep('set','qpos',cur_state(1:Model.nq,1),Model.nq);
     mexstep('set','qvel',cur_state(Model.nq+1:Model.nsys,1),Model.nv);
     mexstep('forward');
-    cost_new = 0;x_new(:,1) = cur_state;u_new = u_nom;
+    cost_new=0;x_new(:,1)=cur_state;u_new=u_nom;
     for i = 1:1:horizon
         u_new(:,i) = max(Model.uRange(1),min(Model.uRange(2),u_nom(:,i) - 1*K(:,:,i)*(x_new(:,i)-x_nom(:,i)) + Task.alpha*kt(:,i)));  
 %         feedback(1,i,ite) = K(:,:,i)*(x_new(:,i)-x_nom(:,i));
@@ -77,7 +77,7 @@ while forward_flag
         z = (cost(ite-1) - cost_new)/delta_j;
     end
     
-    if (z >= 0 || Task.alpha < 10^-5)
+    if (z >= -0.6 || Task.alpha < 10^-5)
         forward_flag = false;
         cost(ite) = cost_new;
         x_nom = x_new;
@@ -93,8 +93,8 @@ while forward_flag
 end
 x_traj_ite_ilqr(:,:,ite) = x_nom;
 u_traj_ite_ilqr(:,:,ite) = u_nom;
-% state_error = getStateError(Model,x_nom(:,end),Task.xTarget)
-% [state_error cost_new]
+state_error = getStateError(Model,x_nom(:,end),Task.xTarget);
+[ite state_error cost_new]
 
 % lsid
 for i = 1:1:horizon
@@ -127,21 +127,20 @@ for i = 1:1:horizon
 end
 
 %% backpass
-delta_j = 0; 
+delta_j=0;
 for i = horizon:-1:1
     Quu(:,:,i) = Bid(:,:,i)'*Sk(:,:,i+1)*Bid(:,:,i)+Task.R;
     if min(eig(Quu(:,:,i))) <= 0
         disp('Quu is not positive definite')
     end
-
     kpreinv = inv(Quu(:,:,i));
     K(:,:,i) = kpreinv*Bid(:,:,i)'*Sk(:,:,i+1)*Aid(:,:,i);
     Kv(:,:,i) = kpreinv*Bid(:,:,i)';
     Ku(:,:,i) = kpreinv*Task.R;
     Sk(:,:,i) = Aid(:,:,i)'*Sk(:,:,i+1)*(Aid(:,:,i)-Bid(:,:,i)*K(:,:,i))+Task.Q;
     vk(:,i) = (Aid(:,:,i)-Bid(:,:,i)*K(:,:,i))'*vk(:,i+1)-K(:,:,i)'*Task.R*u_nom(:,i)+Task.Q*(x_nom(:,i)-Task.xTarget);
-    kt(:,i) = - Kv(:,:,i)*vk(:,i+1) - Ku(:,:,i)*u_nom(:,i); Qu = Task.R*u_nom(:,i)+Bid(:,:,i)'*vk(:,i+1);
-    delta_j = delta_j - (Task.alpha*kt(:,i)'*Qu+Task.alpha^2/2*kt(:,i)'*Quu(:,:,i)*kt(:,i));
+    kt(:,i) = - Kv(:,:,i)*vk(:,i+1) - Ku(:,:,i)*u_nom(:,i); Qu = Task.R*u_nom(:,i)+Bid(:,:,i)'*vk(:,i+1);  
+    delta_j = delta_j + (Task.alpha*kt(:,i)'*Qu+Task.alpha^2/2*kt(:,i)'*Quu(:,:,i)*kt(:,i));
 end
 if isempty(cost0)
     cost0 = cost(1);
@@ -155,16 +154,17 @@ if idx > size(conv_rate,1)
 end
 ite = ite + 1; 
 if strcmp(Model.name, 's6') || strcmp(Model.name, 's3')
-    criteria = (norm(x_nom(1:2,end)-Task.xTarget(1:2))>=0.03); % s6
-elseif strcmp(Model.name, 'cartpole') || strcmp(Model.name, 'acrobot')% || strcmp(Model.name, 'pendulum')
-    criteria = (mean(conv_rate) > Task.converge); % cartpole
+    criteria = (norm(x_nom(1:2,end)-Task.xTarget(1:2))>=0.03);
+elseif strcmp(Model.name, 'cartpole')
+    criteria = (mean(conv_rate) > Task.converge);
 elseif strcmp(Model.name, 'fish')
-    criteria = (norm(x_nom(1:3,end)-Task.xTarget(1:3))>=0.02); % fish
-elseif strcmp(Model.name, 'pendulum')
-%     criteria = (norm(x_nom(1:2,end)-Task.xTarget(1:2))>=0.02); % pendulum
-    criteria = (ite < Task.maxIte); % pendulum
+    criteria = (norm(x_nom(1:3,end)-Task.xTarget(1:3))>=0.02);
+elseif strcmp(Model.name, 'pendulum') || strcmp(Model.name, 'acrobot')
+%     criteria = (norm(x_nom(1:2,end)-Task.xTarget(1:2))>=0.02);
+    criteria = (ite < Task.maxIte);
 else
-    disp('Criteria not specified...')
+%     disp('Criteria not specified...')
+    criteria = (ite < Task.maxIte);
 end
 end
 train_time = toc;

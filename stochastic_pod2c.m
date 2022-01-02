@@ -10,9 +10,9 @@ x_traj = Model.xInit;ite_per_step=[];time_per_step=[];cost0=[];
 
 %% run arma-ilqr
 mexstep('load',['./model/' Model.file]);
-[u_nom,x_nom,cost,train_time] = ilqr_arma(Model,Task,x_traj(:,1),u_traj,Task.horizon,cost0);
+[u_nom,x_nom,cost,train_time] = ilqr_arma_stochastic(Model,Task,x_traj(:,1),u_traj,Task.horizon,cost0);
 total_time = train_time
-cost = cost
+cost_f = cost(end)
 
 %% nominal traj
 % x_traj_check = Model.xInit;
@@ -27,6 +27,15 @@ cost = cost
 %     x_traj_check(Model.nq+1:Model.nsys,i) = mexstep('get','qvel')';
 % end
 % mexstep('exit');
+
+%% output result
+% fid = fopen('result0.txt','wt');
+% for i = 1 : Task.horizon
+%     for j = 1 : Model.nu
+%         fprintf(fid,'%.10f ',u_nom(j,i));
+%     end
+% end
+% fclose(fid);
 
 %% plot
 figure;

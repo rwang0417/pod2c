@@ -48,33 +48,38 @@ if strcmp(Model.name, 'pendulum')
     Task.alpha = 1;
     Task.horizon = 30;
     Task.converge = 0.0001;
-    Task.maxIte = 40;
+    Task.maxIte = 100;
     Task.avg_num = 100;
     Task.ptb = 0.0001;
     Task.statePtb = 0.0001;
     Task.training_noise = 0.0;
+    Task.measurement_noise = 0;
     Task.xTarget = [0;0];
-    Task.R = 1*10^0 * eye(Model.nu);
+    Task.R = 2*10^0 * eye(Model.nu);
     Task.Q = 0*eye(Task.nm*Task.qx+Model.nu*(Task.qu-1));
     Task.QT = 0*eye(Task.nm*Task.qx+Model.nu*(Task.qu-1));
     Task.Q(1:Task.nm,1:Task.nm) = 1*Task.Ck*[1 0;0 0.1]*Task.Ck';
     Task.QT(1:Task.nm,1:Task.nm) = 100*eye(Task.nm);
 elseif strcmp(Model.name, 'cartpole')
-    Task.qx = 1;
-    Task.qu = 1;
-    Task.nSim = 50;
-    Task.Ck = eye(Model.nsys);%[1 0 0 0;0 1 0 0];%
+    Task.qx = 2;
+    Task.qu = 2;
+    Task.nSim = 400;%50
+    Task.Ck = [1 0 0 0;0 1 0 0];%eye(Model.nsys);%
     Task.nm = size(Task.Ck, 1);
-    Task.alpha = 0.3;
+    Task.alpha = 0.1;
     Task.horizon = 30;
     Task.converge = 0.0000001;
-    Task.maxIte = 100;%200;%
-    Task.avg_num = 100;
+    Task.maxIte = 200;
+    Task.avg_num = 1;%100
+    Task.avg_num_forward = 1;
     Task.training_noise = 0.0001;
-    Task.ptb = 0.001;
+    Task.measurement_noise = 0.000;
+    Task.ptb = 0.01; % 0.01
     Task.statePtb = 0.001;
+    Task.A_kinematics = eye(2);
+    Task.B_kinematics = [0.1 0;0 0.1];
     Task.xTarget = [0;pi;0;0];
-    Task.R = 50*10^-2 * eye(Model.nu);
+    Task.R = 100*10^-2 * eye(Model.nu);
     cx = 1*10^-1; cv = 1*10^-1;
     ctx = 5000*10^0; ctv = 1*10^5;
     Task.Q = 0*eye(Task.nm*Task.qx+Model.nu*(Task.qu-1));
@@ -163,8 +168,8 @@ elseif strcmp(Model.name, 'acrobot')
     Task.nm = size(Task.Ck, 1);
     Task.alpha = 0.3;
     Task.horizon = 500;
-    Task.converge = 0.001;%0.001
-    Task.maxIte = 200;
+    Task.converge = 0.001;
+    Task.maxIte = 1000;
     Task.statePtb = 0.00001;
     Task.xTarget = [0;0;0;0];
     Task.R = 10*10^-1 * eye(Model.nu);
@@ -174,6 +179,26 @@ elseif strcmp(Model.name, 'acrobot')
     Task.QT = 0*eye(Task.nm*Task.qx+Model.nu*(Task.qu-1));
     Task.Q(1:Task.nm,1:Task.nm) = cx*diag([1,0.05,0.01,0.01]);
     Task.QT(1:Task.nm,1:Task.nm) = ctx*diag([2,0.5,0.1,0.1]);
+elseif strcmp(Model.name, 'cheetah')
+    Task.qx = 1;
+    Task.qu = 1;
+    Task.nSim = 60;
+    Task.ptb = 0.00001;
+    Task.Ck = eye(Model.nsys);
+    Task.nm = size(Task.Ck, 1);
+    Task.alpha = 0.3;
+    Task.horizon = 300;
+    Task.converge = 0.001;
+    Task.maxIte = 100;
+    Task.statePtb = 0.00001;
+    Task.xTarget = [zeros(Model.nq,1);10;0;zeros(Model.nv-2,1)]; 
+    Task.R = 10*10^-1 * eye(Model.nu);
+    cx = 1*10^1; cv = 1*10^-1;
+    ctx = 1*10^1; ctv = 1*10^5;
+    Task.Q = 0*eye(Task.nm*Task.qx+Model.nu*(Task.qu-1));
+    Task.QT = 0*eye(Task.nm*Task.qx+Model.nu*(Task.qu-1));
+    Task.Q(10:11,10:11) = cx * [1 0;0 1];
+    Task.QT(10:11,10:11) = ctx * [1 0;0 1];
 else
     error('No task registered for this model')
 end
